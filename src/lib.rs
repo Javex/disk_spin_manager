@@ -85,6 +85,7 @@ mod test {
 
     #[test]
     fn it_works() {
+        // prepare test
         let sysfs = TempDir::new("sysfs").unwrap();
         let block = sysfs.path().join("block");
         create_dir(&block).unwrap();
@@ -92,8 +93,11 @@ mod test {
         let textfile_collector = TempDir::new("textfile_collector").unwrap();
         let disk_status = textfile_collector.path().join("disk_status.prom");
         let disk_query = FakeHdparm {};
+
+        // run a single cycle
         update_metrics(&disk_query, sysfs.path(), &disk_status);
 
+        // compare results
         let disk_metrics = fs::read_to_string(&disk_status).unwrap();
         let expected = String::from(
             "# HELP disk_status Status of the disk (1=active, 0=standby)
