@@ -1,18 +1,52 @@
-use once_cell::sync::Lazy;
-use prometheus::{register_gauge_vec, Encoder, GaugeVec, TextEncoder};
+use prometheus::{Encoder, GaugeVec, Opts, Registry, TextEncoder};
 use std::fs::{self, read_dir};
 use std::io::BufWriter;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-static DISK_STATUS: Lazy<GaugeVec> = Lazy::new(|| {
-    register_gauge_vec!(
-        "disk_status",
-        "Status of the disk (1=active, 0=standby)",
-        &["disk"]
-    )
-    .unwrap()
-});
+pub struct DiskMonitor {
+    registry: Registry,
+    disk_status: GaugeVec,
+    sysfs: PathBuf,
+    textfile: PathBuf,
+}
+
+impl DiskMonitor {
+    pub fn new(sysfs: PathBuf, textfile: PathBuf) -> Self {
+        let registry = Registry::new();
+        let disk_status = GaugeVec::new(
+            Opts::new("disk_status", "Status of the disk (1=active, 0=standby)"),
+            &["disk"],
+        )
+        .unwrap();
+        registry.register(Box::new(disk_status.clone())).unwrap();
+        DiskMonitor {
+            registry,
+            disk_status,
+            sysfs,
+            textfile,
+        }
+    }
+
+    pub fn update_metrics(&self, disk_query: &impl DiskStatus) {
+        let all_disks = get_all_disks(&self.sysfs);
+        println!("all_disks: {:?}", all_disks);
+        for disk in all_disks {
+            if let Some(status) = disk_query.get_disk_status(&disk) {
+                self.disk_status.with_label_values(&[&disk]).set(status);
+            }
+        }
+        self.write_textfile()
+    }
+
+    fn write_textfile(&self) {
+        let textfile = fs::File::create(&self.textfile).unwrap();
+        let mut textfile = BufWriter::new(textfile);
+        let encoder = TextEncoder::new();
+        let metric_families = self.registry.gather();
+        encoder.encode(&metric_families, &mut textfile).unwrap();
+    }
+}
 
 pub trait DiskStatus {
     fn get_disk_status(&self, disk: &str) -> Option<f64> {
@@ -49,25 +83,6 @@ fn get_all_disks(sysfs: &Path) -> Vec<String> {
         .collect()
 }
 
-pub fn update_metrics(disk_query: &impl DiskStatus, sysfs: &Path, disk_status: &Path) {
-    let all_disks = get_all_disks(sysfs);
-    println!("all_disks: {:?}", all_disks);
-    for disk in all_disks {
-        if let Some(status) = disk_query.get_disk_status(&disk) {
-            DISK_STATUS.with_label_values(&[&disk]).set(status);
-        }
-    }
-    write_textfile(disk_status)
-}
-
-fn write_textfile(textfile: &Path) {
-    let textfile = fs::File::create(textfile).unwrap();
-    let mut textfile = BufWriter::new(textfile);
-    let encoder = TextEncoder::new();
-    let metric_families = prometheus::gather();
-    encoder.encode(&metric_families, &mut textfile).unwrap();
-}
-
 #[cfg(test)]
 mod test {
     use std::fs::{self, create_dir};
@@ -93,9 +108,10 @@ mod test {
         let textfile_collector = TempDir::new("textfile_collector").unwrap();
         let disk_status = textfile_collector.path().join("disk_status.prom");
         let disk_query = FakeHdparm {};
+        let monitor = DiskMonitor::new(sysfs.path().to_path_buf(), disk_status.to_path_buf());
 
         // run a single cycle
-        update_metrics(&disk_query, sysfs.path(), &disk_status);
+        monitor.update_metrics(&disk_query);
 
         // compare results
         let disk_metrics = fs::read_to_string(&disk_status).unwrap();

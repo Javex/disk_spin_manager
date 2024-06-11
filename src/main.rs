@@ -2,14 +2,16 @@ use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
 
-use disk_status_exporter::{update_metrics, Hdparm};
+use disk_status_exporter::{DiskMonitor, Hdparm};
 
 fn main() {
-    let sysfs = Path::new("/sys");
-    let textfile = Path::new("/var/lib/node_exporter/textfile_collector/disk_status.prom");
+    let monitor = DiskMonitor::new(
+        Path::new("/sys").to_path_buf(),
+        Path::new("/var/lib/node_exporter/textfile_collector/disk_status.prom").to_path_buf(),
+    );
     let disk_query = Hdparm {};
     loop {
-        update_metrics(&disk_query, sysfs, textfile);
+        monitor.update_metrics(&disk_query);
         sleep(Duration::from_secs(60));
     }
 }
