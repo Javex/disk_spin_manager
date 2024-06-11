@@ -1,17 +1,38 @@
+use clap::Parser;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
 
-use disk_status_exporter::{DiskMonitor, Hdparm};
+use anyhow::Result;
+use disk_status_exporter::{
+    cli::Args,
+    metrics::{DiskMonitor, Hdparm},
+};
+use log::debug;
 
-fn main() {
+fn configure_logging() {
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Debug)
+        .init();
+}
+
+fn main() -> Result<()> {
+    configure_logging();
+
+    let args = Args::parse();
+
     let monitor = DiskMonitor::new(
-        Path::new("/sys").to_path_buf(),
-        Path::new("/var/lib/node_exporter/textfile_collector/disk_status.prom").to_path_buf(),
-    );
-    let disk_query = Hdparm {};
+        Path::new(&args.sysfs).to_path_buf(),
+        Path::new(&args.textfile).to_path_buf(),
+    )?;
+    debug!("Created new disk monitor");
+    let disk_query = Hdparm {
+        path: args.hdparm.clone(),
+    };
     loop {
-        monitor.update_metrics(&disk_query);
+        debug!("Updating metrics");
+        monitor.update_metrics(&disk_query)?;
+        debug!("Finished metrics update, sleeping");
         sleep(Duration::from_secs(60));
     }
 }
