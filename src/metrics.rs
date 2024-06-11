@@ -1,7 +1,7 @@
 use anyhow::{bail, Context, Result};
 use log::{debug, error};
 use prometheus::{Encoder, GaugeVec, Opts, Registry, TextEncoder};
-use std::fs::{self, read_dir};
+use std::fs::{self, read_dir, DirEntry};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -101,15 +101,16 @@ impl DiskStatus for Hdparm {
 
 fn get_all_disks(sysfs: &Path) -> Result<Vec<String>> {
     let block_dir = sysfs.join("block");
-    Ok(read_dir(block_dir)
+    let dir_entries: Result<Vec<DirEntry>, _> = read_dir(block_dir)
         .context("Failed to list sysfs/block")?
-        .map(|r| {
-            let d = r.expect("Failed to get results");
-            String::from(d.file_name().to_string_lossy())
-        })
+        .collect();
+    let result: Vec<String> = dir_entries?
+        .into_iter()
+        .map(|d| String::from(d.file_name().to_string_lossy()))
         .filter(|d| d.starts_with("sd"))
         .map(|d| format!("/dev/{d}"))
-        .collect())
+        .collect();
+    Ok(result)
 }
 
 #[cfg(test)]
