@@ -117,7 +117,7 @@ fn get_all_disks(sysfs: &Path) -> Result<Vec<String>> {
 mod test {
     use std::fs::{self, create_dir};
 
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -131,11 +131,11 @@ mod test {
     #[test]
     fn it_works() {
         // prepare test
-        let sysfs = TempDir::new("sysfs").unwrap();
+        let sysfs = TempDir::new().unwrap();
         let block = sysfs.path().join("block");
         create_dir(&block).unwrap();
         fs::write(block.join("sda"), "").unwrap();
-        let textfile_collector = TempDir::new("textfile_collector").unwrap();
+        let textfile_collector = TempDir::new().unwrap();
         let disk_status = textfile_collector.path().join("disk_status.prom");
         let disk_query = FakeHdparm {};
         let monitor =
