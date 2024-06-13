@@ -6,7 +6,7 @@ pub struct Args {
     /// Textfile path where to write metrics
     #[arg(
         long,
-        default_value_t = String::from("/var/lib/node_exporter/textfile/disk_status.prom"),
+        default_value_t = String::from("/var/lib/node_exporter/textfile_collector/disk_status.prom"),
     )]
     pub textfile: String,
 
