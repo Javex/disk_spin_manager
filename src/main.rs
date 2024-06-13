@@ -4,7 +4,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use anyhow::Result;
-use disk_status_exporter::{
+use disk_spin_manager::{
     cli::Args,
     metrics::{DiskMonitor, Hdparm},
 };

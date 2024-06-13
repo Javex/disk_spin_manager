@@ -32,5 +32,5 @@ jobs:
       - name: Upload compiled binary
         uses: actions/upload-artifact@v4
         with:
-          name: disk-spin-monitor
-          path: ./target/release/disk-spin-monitor
+          name: disk_spin_monitor
+          path: ./target/release/disk_spin_monitor
