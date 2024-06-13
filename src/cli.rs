@@ -17,4 +17,8 @@ pub struct Args {
     /// Path to hdparm, defaults to finding it in PATH
     #[arg(long, default_value_t = String::from("hdparm"))]
     pub hdparm: String,
+
+    /// Enable debug mode
+    #[arg(long, default_value_t = false)]
+    pub debug: bool,
 }

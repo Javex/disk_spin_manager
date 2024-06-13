@@ -10,16 +10,20 @@ use disk_spin_manager::{
 };
 use log::debug;
 
-fn configure_logging() {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .init();
+fn configure_logging(args: &Args) {
+    let level = if args.debug {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Warn
+    };
+
+    env_logger::builder().filter_level(level).init();
 }
 
 fn main() -> Result<()> {
-    configure_logging();
-
     let args = Args::parse();
+
+    configure_logging(&args);
 
     let monitor = DiskMonitor::new(
         Path::new(&args.sysfs).to_path_buf(),
