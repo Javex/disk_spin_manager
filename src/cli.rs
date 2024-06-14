@@ -10,10 +10,6 @@ pub struct Args {
     )]
     pub textfile: String,
 
-    /// Path to sysfs, usually "/sys"
-    #[arg(long, default_value_t = String::from("/sys"))]
-    pub sysfs: String,
-
     /// Path to hdparm, defaults to finding it in PATH
     #[arg(long, default_value_t = String::from("hdparm"))]
     pub hdparm: String,
