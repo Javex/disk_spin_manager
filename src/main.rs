@@ -36,6 +36,6 @@ fn main() -> Result<()> {
         debug!("Updating metrics");
         monitor.update_metrics(&disk_query, &lsblk)?;
         debug!("Finished metrics update, sleeping");
-        sleep(Duration::from_secs(60));
+        sleep(Duration::from_secs(args.refresh_interval));
     }
 }

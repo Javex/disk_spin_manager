@@ -17,4 +17,8 @@ pub struct Args {
     /// Enable debug mode
     #[arg(long, default_value_t = false)]
     pub debug: bool,
+
+    /// Refresh interval in seconds, how often to run hdparm to query disk status
+    #[arg(long, default_value_t = 60)]
+    pub refresh_interval: u64,
 }
