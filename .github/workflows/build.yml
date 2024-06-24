@@ -1,6 +1,8 @@
 name: Build & Release
 on:
   push:
+permissions:
+  contents: write
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
