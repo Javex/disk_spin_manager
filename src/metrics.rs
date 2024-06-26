@@ -197,11 +197,11 @@ notify_events 0\n",
         // run a single disk_status cycle
         update_disk_status(&disk_query, &lsblk, &tx).unwrap();
 
-        // Send message to save the file
-        tx.send(MetricMessage::SaveFile).unwrap();
-
         // Briefly sleep to allow inotify to catch up
         thread::sleep(Duration::from_millis(100));
+
+        // Send message to save the file
+        tx.send(MetricMessage::SaveFile).unwrap();
 
         // close this transmitter, too
         drop(tx);
