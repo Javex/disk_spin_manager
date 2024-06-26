@@ -1,6 +1,6 @@
 [package]
 name = "disk_spin_manager"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 publish = false
 description = "A small tool to expose metrics on whether HDDs are currently spinning"
