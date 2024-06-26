@@ -21,6 +21,8 @@ pub fn watch(watches: &[&Path], tx: Sender<MetricMessage>) -> Result<Recommended
 
 #[cfg(test)]
 mod test {
+    use std::{thread, time::Duration};
+
     use log::info;
     use tempfile::TempDir;
 
@@ -37,6 +39,9 @@ mod test {
 
         // emit some events by changing a file
         std::fs::write(event_file, b"Lorem ipsum").unwrap();
+
+        // Briefly sleep to allow inotify to catch up
+        thread::sleep(Duration::from_millis(100));
 
         // Ensure transmitting side is closed
         drop(watcher);

@@ -90,7 +90,7 @@ impl Metrics {
 
 #[cfg(test)]
 mod test {
-    use std::fs;
+    use std::{fs, thread, time::Duration};
 
     use tempfile::TempDir;
 
@@ -199,6 +199,9 @@ notify_events 0\n",
 
         // Send message to save the file
         tx.send(MetricMessage::SaveFile).unwrap();
+
+        // Briefly sleep to allow inotify to catch up
+        thread::sleep(Duration::from_millis(100));
 
         // close this transmitter, too
         drop(tx);
