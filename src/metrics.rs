@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use log::{debug, error};
-use prometheus::core::{AtomicU64, GenericCounter};
-use prometheus::{Encoder, GaugeVec, Opts, Registry, TextEncoder};
+use prometheus::{Encoder, GaugeVec, IntCounterVec, Opts, Registry, TextEncoder};
 use std::fs::{self};
 use std::io::BufWriter;
 use std::path::PathBuf;
@@ -10,14 +9,14 @@ use std::sync::mpsc::Receiver;
 #[derive(Debug)]
 pub enum MetricMessage {
     DiskStatus { disk: String, status: f64 },
-    NotifyEvent(notify::Result<notify::Event>),
+    NotifyEvent(anyhow::Result<String>),
     SaveFile,
 }
 
 pub struct Metrics {
     registry: Registry,
     disk_status: GaugeVec,
-    notify_counter: GenericCounter<AtomicU64>,
+    notify_counter: IntCounterVec,
     textfile: PathBuf,
     rx: Receiver<MetricMessage>,
 }
@@ -33,8 +32,11 @@ impl Metrics {
             .register(Box::new(disk_status.clone()))
             .context("Failed to register disk_status")?;
 
-        let notify_counter =
-            GenericCounter::new("notify_events", "Number of events  for watched directories")?;
+        let notify_counter = IntCounterVec::new(
+            Opts::new("notify_events", "Number of events for watched directories"),
+            &["path"],
+        )?;
+
         registry
             .register(Box::new(notify_counter.clone()))
             .context("Failed to register notify_counter")?;
@@ -61,7 +63,10 @@ impl Metrics {
             MetricMessage::DiskStatus { disk, status } => {
                 self.disk_status.with_label_values(&[&disk]).set(status)
             }
-            MetricMessage::NotifyEvent(Ok(_)) => self.notify_counter.inc(),
+            MetricMessage::NotifyEvent(Ok(base_path)) => self
+                .notify_counter
+                .with_label_values(&[base_path.as_str()])
+                .inc(),
             MetricMessage::NotifyEvent(Err(err)) => {
                 error!("Error from notify event: {:?}", err);
                 return Err(anyhow!(err));
@@ -89,7 +94,7 @@ impl Metrics {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use std::{fs, thread, time::Duration};
 
     use tempfile::TempDir;
@@ -102,7 +107,7 @@ mod test {
 
     use super::*;
 
-    fn init() {
+    pub fn init() {
         let _ = env_logger::builder()
             .filter_level(log::LevelFilter::Debug)
             .is_test(true)
@@ -135,10 +140,7 @@ mod test {
         let expected = String::from(
             "# HELP disk_status Status of the disk (1=active, 0=standby)
 # TYPE disk_status gauge
-disk_status{disk=\"/dev/sda\"} 1
-# HELP notify_events Number of events  for watched directories
-# TYPE notify_events counter
-notify_events 0\n",
+disk_status{disk=\"/dev/sda\"} 1\n",
         );
         assert_eq!(disk_metrics, expected);
     }
@@ -180,7 +182,7 @@ notify_events 0\n",
         let monitored_dir = TempDir::new().unwrap();
         let event_file = monitored_dir.path().join("text.txt");
         let watches = vec![monitored_dir.path()];
-        let watcher = watch::watch(&watches, tx.clone()).unwrap();
+        let watcher = watch::watch(watches, tx.clone()).unwrap();
 
         // emit some events by changing a file
         let _ = std::fs::remove_file(&event_file);
@@ -212,13 +214,14 @@ notify_events 0\n",
         // compare results
         let disk_metrics = fs::read_to_string(&textfile).unwrap();
         // it's 3 events for file create, write & close from inotify
-        let expected = String::from(
+        let expected = format!(
             "# HELP disk_status Status of the disk (1=active, 0=standby)
 # TYPE disk_status gauge
-disk_status{disk=\"/dev/sda\"} 0
-# HELP notify_events Number of events  for watched directories
+disk_status{{disk=\"/dev/sda\"}} 0
+# HELP notify_events Number of events for watched directories
 # TYPE notify_events counter
-notify_events 3\n",
+notify_events{{path=\"{}\"}} 3\n",
+            monitored_dir.path().to_string_lossy().to_string()
         );
         assert_eq!(disk_metrics, expected);
     }

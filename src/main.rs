@@ -42,7 +42,7 @@ fn main() -> Result<()> {
         .map(|s| Path::new(s.as_str()))
         .collect();
     // Ensure watcher isn't dropped until the end
-    let _watcher = watch::watch(&watches, tx_watch)?;
+    let _watcher = watch::watch(watches, tx_watch)?;
 
     // Start thread to regularly save textfile
     let tx_save = tx.clone();
