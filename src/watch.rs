@@ -56,7 +56,7 @@ pub fn watch(watches: Vec<&Path>, tx: Sender<MetricMessage>) -> Result<Recommend
 
 #[cfg(test)]
 mod test {
-    use std::{fs, thread, time::Duration};
+    use std::fs;
 
     use log::info;
     use tempfile::TempDir;
@@ -76,14 +76,12 @@ mod test {
         // emit some events by changing a file
         std::fs::write(event_file, b"Lorem ipsum").unwrap();
 
-        // Briefly sleep to allow inotify to catch up
-        thread::sleep(Duration::from_millis(100));
-
-        // Ensure transmitting side is closed
-        drop(watcher);
-
         let mut counter = 0;
-        for res in rx {
+        // need to know exactly how many events to expect
+        // making a blocking call isn't possible as it's not clear when all events have been
+        // received.
+        for _ in 0..3 {
+            let res = rx.recv().unwrap();
             match res {
                 MetricMessage::NotifyEvent(Ok(event)) => {
                     info!("event: {:?}", event);
@@ -96,6 +94,9 @@ mod test {
                 _ => {}
             }
         }
+
+        // Ensure transmitting side is closed
+        drop(watcher);
 
         assert_eq!(counter, 3);
     }
@@ -117,14 +118,12 @@ mod test {
         // emit some events by changing a file
         std::fs::write(event_file, b"Lorem ipsum").unwrap();
 
-        // Briefly sleep to allow inotify to catch up
-        thread::sleep(Duration::from_millis(100));
-
-        // Ensure transmitting side is closed
-        drop(watcher);
-
         let mut counter = 0;
-        for res in rx {
+        // need to know exactly how many events to expect
+        // making a blocking call isn't possible as it's not clear when all events have been
+        // received.
+        for _ in 0..3 {
+            let res = rx.recv().unwrap();
             match res {
                 MetricMessage::NotifyEvent(Ok(event)) => {
                     info!("event: {:?}", event);
@@ -137,6 +136,9 @@ mod test {
                 _ => {}
             }
         }
+
+        // Ensure transmitting side is closed
+        drop(watcher);
 
         assert_eq!(counter, 3);
     }

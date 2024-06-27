@@ -95,7 +95,7 @@ impl Metrics {
 
 #[cfg(test)]
 pub mod test {
-    use std::{fs, thread, time::Duration};
+    use std::fs;
 
     use tempfile::TempDir;
 
@@ -199,8 +199,12 @@ disk_status{disk=\"/dev/sda\"} 1\n",
         // run a single disk_status cycle
         update_disk_status(&disk_query, &lsblk, &tx).unwrap();
 
-        // Briefly sleep to allow inotify to catch up
-        thread::sleep(Duration::from_millis(100));
+        // manually receive some metrics as inotify times can be unpredictable
+        // need to know exactly how many events to expect
+        for _ in 0..4 {
+            let message = metrics.rx.recv().unwrap();
+            metrics.handle_metrics_message(message).unwrap();
+        }
 
         // Send message to save the file
         tx.send(MetricMessage::SaveFile).unwrap();
@@ -208,7 +212,7 @@ disk_status{disk=\"/dev/sda\"} 1\n",
         // close this transmitter, too
         drop(tx);
 
-        // receive all metrics
+        // receive all metrics (remaining should just be the save event)
         metrics.receive_metrics().unwrap();
 
         // compare results
