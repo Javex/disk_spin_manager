@@ -221,7 +221,7 @@ disk_status{{disk=\"/dev/sda\"}} 0
 # HELP notify_events Number of events for watched directories
 # TYPE notify_events counter
 notify_events{{path=\"{}\"}} 3\n",
-            monitored_dir.path().to_string_lossy().to_string()
+            monitored_dir.path().to_string_lossy()
         );
         assert_eq!(disk_metrics, expected);
     }

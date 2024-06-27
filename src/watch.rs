@@ -25,7 +25,7 @@ fn match_base_path(base_paths: &[PathBuf], paths: &[PathBuf]) -> Result<String> 
 }
 
 fn handle_notify_event(
-    watches: &Vec<PathBuf>,
+    watches: &[PathBuf],
     tx: &Sender<MetricMessage>,
     res: notify::Result<notify::Event>,
 ) {
@@ -108,7 +108,7 @@ mod test {
         let subdir1 = monitored_dir.path().join("1");
         fs::create_dir(&subdir1).unwrap();
         let subdir2 = monitored_dir.path().join("2");
-        fs::create_dir(&subdir2).unwrap();
+        fs::create_dir(subdir2).unwrap();
         let event_file = subdir1.join("text.txt");
         let watches = vec![subdir1.as_path()];
         let (tx, rx) = std::sync::mpsc::channel();
