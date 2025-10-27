@@ -36,7 +36,7 @@ jobs:
       - name: Build release target
         run: cargo build --release
       - name: Upload compiled binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: disk_spin_manager
           path: ./target/release/disk_spin_manager
